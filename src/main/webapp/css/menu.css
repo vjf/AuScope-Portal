@@ -53,14 +53,17 @@
 }
 
 
+    
 
 #latlng {
     position:absolute;
-    top: 70px;
-    right: 120px;
+    top: 55px;
+    right: 10px;
     color: #15428B;
     font: 12px Arial, Tahoma, Helvetica, sans-serif;
 }
+
+
 
 #permalinkicon {
     position:absolute;
@@ -74,4 +77,23 @@
     right: 10px;
     color: #15428B;
     font: 12px Arial, Tahoma, Helvetica, sans-serif;
+}
+
+
+
+@media all and (max-width: 800px) {
+    #menu {
+      opacity: 0.7;
+      height:35px;
+      font-size : 12px ;
+      line-height : 25px;
+    }
+    
+    #permalinkicon {
+        top: 33px;
+    }
+    
+    #permalink {
+        top: 33px;
+    }
 }

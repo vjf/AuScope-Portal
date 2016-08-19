@@ -69,12 +69,12 @@ Ext.define('auscope.layer.querier.wfs.knownlayerfactories.NVCLFactory', {
         var win = Ext.create('Ext.Window', {
             border      : true,
             layout      : 'fit',
-            resizable   : false,
+            resizable   : true, //false,
             modal       : true,
             plain       : false,
             title       : 'Borehole Id: ' + datasetName,
-            height      : 600,
-            width       : 850,
+            //height      : 600,
+            //width       : 850,
             items:[{
                 xtype           : 'tabpanel',
                 activeItem      : 0,
@@ -250,8 +250,8 @@ Ext.define('auscope.layer.querier.wfs.knownlayerfactories.NVCLFactory', {
                                 xtype       : 'fieldset',
                                 title       : 'List of Scalars',
                                 anchor      : '100%',
-                                //autoHeight  : true,
-                                height      : 500,
+                                autoHeight  : true,
+                                //height      : 500,
 
                                 // these are applied to fields
                                 defaults    : {anchor:'-5', allowBlank:false},
@@ -267,7 +267,7 @@ Ext.define('auscope.layer.querier.wfs.knownlayerfactories.NVCLFactory', {
                                 layout: 'form',
                                 anchor: '100%',
                                 autoHeight: true,
-                                paddingRight: '10px'
+                                paddingRight: '0px' //'10px'
                             },
 
                             // fieldsets
@@ -848,10 +848,17 @@ Ext.define('auscope.layer.querier.wfs.knownlayerfactories.NVCLFactory', {
         if(!responseObject.data || responseObject.data.length==0){
             return null;
         }
+        
+        var tabTitleStr = featureId + ':Spectral Datasets';
+        var buttonAlignStr = 'right';
+        if (typeof window.innerWidth != 'undefined' && window.innerWidth < 800) {
+            tabTitleStr = 'Spectral Datasets';
+            buttonAlignStr = 'left';
+        }
 
 
         return Ext.create('portal.layer.querier.BaseComponent',{
-            tabTitle : featureId + ':Spectral Datasets',
+            tabTitle : tabTitleStr,
             header : false,
             layout : 'fit',
             //We only have a single child which is our grid
@@ -921,7 +928,7 @@ Ext.define('auscope.layer.querier.wfs.knownlayerfactories.NVCLFactory', {
                         });
                     }
                 },
-                buttonAlign : 'right',
+                buttonAlign : buttonAlignStr,
                 buttons : [{
                     xtype : 'button',
                     iconCls : 'info',

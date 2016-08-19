@@ -131,6 +131,14 @@ Ext.define('auscope.layer.filterer.forms.CSWServiceFilterForm', {
      * On single click, show a highlight of all BBoxes
      */
     _spatialBoundsClickHandler : function() {
+        console.log("Click mag!");
+        // If using a narrow width device, then collapse the LHS panel
+        if (typeof window.innerWidth != 'undefined' && window.innerWidth < 800) {
+            var s = Ext.ComponentQuery.query('#west_panel');
+            if (typeof s === 'object' && s.length>0) {
+                s[0].collapse(Ext.Component.DIRECTION_LEFT, false);
+            }
+        }
         // In IE & Chrome, this handler will get called even though the button
         // is disabled. Hence, we need to do an explicit checking to see if
         // the preview button is enabled before we continue.
@@ -183,6 +191,14 @@ Ext.define('auscope.layer.filterer.forms.CSWServiceFilterForm', {
      * On double click, move the map so that specified bounds are visible
      */
     _spatialBoundsDoubleClickHandler : function() {
+        console.log("Click mag!");
+        // If using a narrow width device, then collapse the LHS panel
+        if (typeof window.innerWidth != 'undefined' && window.innerWidth < 800) {
+            var s = Ext.ComponentQuery.query('#west_panel');
+            if (typeof s === 'object' && s.length>0) {
+                s[0].collapse(Ext.Component.DIRECTION_LEFT, false);
+            }
+        }
         // In IE & Chrome, this handler will get called even though the button
         // is disabled. Hence, we need to do an explicit checking to see if
         // the preview button is enabled before we continue.

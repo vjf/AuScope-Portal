@@ -183,6 +183,7 @@ Ext.application({
             layerStore : layerStore,
             listeners : {
                 query : function(mapWrapper, queryTargets) {
+                    console.log("Query event");
                     queryTargetHandler.handleQueryTargets(mapWrapper, queryTargets);
                 }
             }
@@ -292,15 +293,34 @@ Ext.application({
         /**
          * Used as a placeholder for the tree and details panel on the left of screen
          */
+         
+        var collapsibleFlag = false;
+        var splitFlag = true;
+        var panelWidth = 370;
+        var panelMargin = '100 0 0 3';
+        if (typeof window.innerWidth != 'undefined') {
+            if (window.innerWidth < 800) {
+                collapsibleFlag = true;
+                splitFlag = false;
+                panelMargin = '50 0 0 3';
+            }
+            if (window.innerWidth < 425) {
+                panelWidth = window.innerWidth - 5;
+            }
+        }
+
         var westPanel = {
             layout: 'border',//VT: vbox doesn't support splitbar unless we custom it.
+            id: 'west_panel',
             region:'west',
             border: false,
-            split:true,
-            margin:'100 0 0 3',
-            width: 370,
+            collapsible: collapsibleFlag,
+            split: splitFlag,
+            margin: panelMargin,
+            width: panelWidth,
             items:[tabsPanel]
         };
+        
 
         /**
          * This center panel will hold the google maps instance

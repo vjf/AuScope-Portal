@@ -53,16 +53,25 @@ Ext.define('auscope.layer.querier.wfs.factories.BoreholeFactory', {
                 }
             }
         }
+        
+        var tabTitleStr = 'Borehole:' + boreholeName;
+        var labelSz = 75;
+        var buttonAlignStr = 'right';
+        if (typeof window.innerWidth != 'undefined' && window.innerWidth < 800) {
+            tabTitleStr = 'Borehole';
+            labelSz = 60;
+            buttonAlignStr = 'left';
+        }
 
         //Build our component
         return Ext.create('portal.layer.querier.BaseComponent', {
             border : false,
-            tabTitle : 'Borehole:' + boreholeName ,
+            tabTitle : tabTitleStr,
             layout : 'fit',
             items : [{
                 xtype : 'fieldset',
                 title : 'Borehole',
-                labelWidth : 75,
+                labelWidth : labelSz,
                 autoScroll : true,
                 items : [{
                     xtype : 'displayfield',
@@ -108,7 +117,7 @@ Ext.define('auscope.layer.querier.wfs.factories.BoreholeFactory', {
                     value : startPoint
                 }]
             }],
-            buttonAlign : 'right',
+            buttonAlign : buttonAlignStr,
             buttons : [{
                 text : 'Download XML',
                 iconCls : 'download',
