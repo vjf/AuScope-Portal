@@ -12,7 +12,6 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.auscope.portal.core.server.controllers.BasePortalController;
-import org.auscope.portal.mineraloccurrence.MineralTenementFilter;
 import org.auscope.portal.pressuredb.AvailableOMResponse;
 import org.auscope.portal.pressuredb.PressureDBFilter;
 import org.auscope.portal.server.MineralTenementServiceProviderType;

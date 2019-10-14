@@ -6,15 +6,21 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import org.auscope.portal.core.server.OgcServiceProviderType;
 import org.auscope.portal.core.server.controllers.BasePortalController;
 import org.auscope.portal.core.services.WMSService;
+import org.auscope.portal.core.services.CSWCacheService;
 import org.auscope.portal.core.services.methodmakers.filter.FilterBoundingBox;
 import org.auscope.portal.core.services.responses.wfs.WFSResponse;
 import org.auscope.portal.core.services.responses.wfs.WFSCountResponse;
@@ -30,6 +36,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 import org.w3c.dom.Document; 
 
+
 /*
  * Controller for Mineral Tenement services
  */
@@ -38,18 +45,26 @@ public class MineralTenementController extends BasePortalController {
 
     private MineralTenementService mineralTenementService;
     private WMSService mineralTenementWMSService;
+    private CSWCacheService cswService;
+
+
 
     private ArcGISToMineralTenement arcGISToMineralTenementTransformer;
 
     private static final String ENCODING = "ISO-8859-1";
     private static final int BUFFERSIZE = 1024 * 1024;
-    private HashMap<String, String> MINERAL_TENEMENT_COLOUR_MAP = new HashMap<String, String>();    
+    private HashMap<String, String> MINERAL_TENEMENT_COLOUR_MAP = new HashMap<String, String>();
+    
+    /** Log object for this class. */
+    protected final Log logger = LogFactory.getLog(getClass());
 
     @Autowired
-    public MineralTenementController(MineralTenementService mineralTenementService, WMSService wmsService, ArcGISToMineralTenement arcGISToMineralTenement) {
+    public MineralTenementController(MineralTenementService mineralTenementService, WMSService wmsService, ArcGISToMineralTenement arcGISToMineralTenement,
+                                     CSWCacheService cswService) {
         this.mineralTenementService = mineralTenementService;
         this.mineralTenementWMSService = wmsService;
         this.arcGISToMineralTenementTransformer = arcGISToMineralTenement;
+        this.cswService = cswService;
         
         MINERAL_TENEMENT_COLOUR_MAP.put("exploration", "#0000FF");
         MINERAL_TENEMENT_COLOUR_MAP.put("prospecting", "#00FFFF");
@@ -63,7 +78,10 @@ public class MineralTenementController extends BasePortalController {
         
         MINERAL_TENEMENT_COLOUR_MAP.put("MineralTenement", "#0000FF");
         
-        }
+        // ArcGIS
+        MINERAL_TENEMENT_COLOUR_MAP.put("granted", "#00FF00");
+        MINERAL_TENEMENT_COLOUR_MAP.put("application", "#0000FF");
+    }
 
     /**
      * Retrieves a list of mineral tenement features
@@ -93,7 +111,7 @@ public class MineralTenementController extends BasePortalController {
         // The presence of a bounding box causes us to assume we will be using this GML for visualizing on a map
         // This will in turn limit the number of points returned to 200
         OgcServiceProviderType ogcServiceProviderType = OgcServiceProviderType.parseUrl(serviceUrl);
-        MineralTenementServiceProviderType mineralTenementServiceProviderType = MineralTenementServiceProviderType.parseUrl(serviceUrl);
+        MineralTenementServiceProviderType mineralTenementServiceProviderType = MineralTenementServiceProviderType.parseUrl(serviceUrl, cswService);
         FilterBoundingBox bbox = FilterBoundingBox.attemptParseFromJSON(bboxJson, ogcServiceProviderType);
         WFSResponse response = null;
         try {
@@ -201,7 +219,7 @@ public class MineralTenementController extends BasePortalController {
         // The presence of a bounding box causes us to assume we will be using this GML for visualizing on a map
         // This will in turn limit the number of points returned to 200
         OgcServiceProviderType ogcServiceProviderType = OgcServiceProviderType.parseUrl(serviceUrl);
-        MineralTenementServiceProviderType mineralTenementServiceProviderType = MineralTenementServiceProviderType.parseUrl(serviceUrl);
+        MineralTenementServiceProviderType mineralTenementServiceProviderType = MineralTenementServiceProviderType.parseUrl(serviceUrl, cswService);
         FilterBoundingBox bbox = FilterBoundingBox.attemptParseFromJSON(bboxJson, ogcServiceProviderType);
         WFSCountResponse response = null;
         try {
@@ -251,9 +269,8 @@ public class MineralTenementController extends BasePortalController {
             HttpServletResponse response) throws Exception {
 
         FilterBoundingBox bbox = FilterBoundingBox.attemptParseFromJSON(bboxJson);
-        MineralTenementServiceProviderType mineralTenementServiceProviderType = MineralTenementServiceProviderType.parseUrl(serviceUrl);
-        String filter = this.mineralTenementService.getMineralTenementFilter(name, tenementType, owner, size, endDate,
-                bbox, null,  mineralTenementServiceProviderType); 
+        MineralTenementServiceProviderType mineralTenementServiceProviderType = MineralTenementServiceProviderType.parseUrl(serviceUrl, cswService);
+        String filter = this.mineralTenementService.getMineralTenementFilter(name, tenementType, owner, size, endDate, bbox, null, mineralTenementServiceProviderType); 
 
         // Some ArcGIS servers do not support filters (not enabled?)
         if (mineralTenementServiceProviderType == MineralTenementServiceProviderType.ArcGIS) {
@@ -344,20 +361,23 @@ public class MineralTenementController extends BasePortalController {
             @RequestParam(required = false, value = "optionalFilters") String optionalFilters,
             HttpServletResponse response) throws Exception {
         String style = "";
+        MineralTenementServiceProviderType mineralTenementServiceProviderType = MineralTenementServiceProviderType.parseUrl(serviceUrl, cswService);
+        // logger.debug("feature type = " + mineralTenementServiceProviderType.featureType());
         ccProperty = org.auscope.portal.core.util.TextUtil.cleanQueryParameter(ccProperty);
         switch (ccProperty) {
-        case "TenementType" :
-            style = this.getStyle(false,ccProperty,"mt:MineralTenement",name, tenementType, owner, size, endDate);
-            break;
-        case "TenementStatus":
-            style = this.getStyle(false,ccProperty,"mt:MineralTenement",name, tenementType, owner, size, endDate);
-            break;
-        default:
-            MineralTenementServiceProviderType mineralTenementServiceProviderType = MineralTenementServiceProviderType.parseUrl(serviceUrl);
-            String filter = this.mineralTenementService.getMineralTenementFilter(name, tenementType, owner, size, endDate,null,optionalFilters, mineralTenementServiceProviderType); //VT:get filter from service
-            style = this.getPolygonStyle(filter, mineralTenementServiceProviderType.featureType(), mineralTenementServiceProviderType.fillColour(), mineralTenementServiceProviderType.borderColour(),
-                    mineralTenementServiceProviderType.styleName());
-            break;
+            case "TenementType":
+            case "TenementStatus":
+                if (mineralTenementServiceProviderType == MineralTenementServiceProviderType.ArcGIS) {
+                    style = this.getArcgisStyle(false, ccProperty, mineralTenementServiceProviderType.featureType());
+                } else {
+                    style = this.getStyle(false, ccProperty, mineralTenementServiceProviderType.featureType(), name, tenementType, owner, size, endDate);
+                }
+                break;
+            default:
+                String filter = this.mineralTenementService.getMineralTenementFilter(name, tenementType, owner, size, endDate, null, optionalFilters, mineralTenementServiceProviderType); //VT:get filter from service
+                style = this.getPolygonStyle(filter, mineralTenementServiceProviderType.featureType(), mineralTenementServiceProviderType.fillColour(), mineralTenementServiceProviderType.borderColour(),
+                        mineralTenementServiceProviderType.styleName());
+                break;
         }
 
         response.setContentType("text/xml");
@@ -372,7 +392,7 @@ public class MineralTenementController extends BasePortalController {
         outputStream.close();
     }
 
-    public String getPolygonStyle(String filter, String name, String color, String borderColor, String styleName) throws IOException {
+    private String getPolygonStyle(String filter, String name, String color, String borderColor, String styleName) throws IOException {
 
         Hashtable<String,String> valueMap = new Hashtable<String,String>();
         valueMap.put("name", name);
@@ -380,13 +400,12 @@ public class MineralTenementController extends BasePortalController {
         valueMap.put("color", color);
         valueMap.put("borderColor", borderColor);
         valueMap.put("styleName", styleName);
-
-
         return  SLDLoader.loadSLD("/org/auscope/portal/slds/MineralTenement_getPolygonStyle.sld", valueMap,false);
 
     }
-    public String getStyle(boolean isLegend,String ccProperty,String layerName,String name, String tenementType, String owner, String size, String endDate) {
-        String rules = getRules(isLegend,ccProperty,name,  tenementType, owner,  size,  endDate) ;
+    
+    private String getStyle(boolean isLegend,String ccProperty,String layerName,String name, String tenementType, String owner, String size, String endDate) {
+        String rules = getRules(isLegend,ccProperty,name,  tenementType, owner,  size,  endDate);
         String header="";
         if (isLegend) {
             header = "<StyledLayerDescriptor version=\"1.0.0\" " +
@@ -437,7 +456,7 @@ public class MineralTenementController extends BasePortalController {
             filter = "";
         } else {
             try {
-                filter = this.mineralTenementService.getMineralTenementFilterCCProperty(name,tenementType, owner, size, endDate, null, ccProperty,ruleName+ "*");
+                filter = this.mineralTenementService.getMineralTenementFilterCCProperty(name,tenementType, owner, size, endDate, null, ccProperty,ruleName+ "*", MineralTenementServiceProviderType.GeoServer);
             } catch (Exception e) {
                 e.printStackTrace();
             }            
@@ -504,6 +523,75 @@ public class MineralTenementController extends BasePortalController {
         "</Rule>";
         return rule;
 
+    }
+
+    /**
+     * Constructs a filter style string for ArcGIS Server
+     *
+     * @param isLegend if true then construct for a legend style, instead of map style
+     * @param ccProperty colour code property, colour the image according to this property's value
+     * @param layerName name of mineral tenement map layer in ArcGIS Server
+     * @returns an XML filter rule string     
+     */
+    private String getArcgisStyle(boolean isLegend,String ccProperty,String layerName) {
+        String header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?> " +
+                        "<sld:StyledLayerDescriptor version=\"1.0.0\" xmlns=\"http://www.opengis.net/ogc\" " +
+                        "xmlns:sld=\"http://www.opengis.net/sld\" xmlns:ogc=\"http://www.opengis.net/ogc\" " +
+                        "xmlns:gml=\"http://www.opengis.net/gml\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" " +
+                        "xsi:schemaLocation=\"http://www.opengis.net/sld http://schemas.opengis.net/sld/1.0.0/StyledLayerDescriptor.xsd\">";
+        
+        String rules = "";
+        if (ccProperty.contains("TenementStatus")) {
+            rules = this.getArcgisRule(isLegend, ccProperty, "granted");
+            rules += this.getArcgisRule(isLegend, ccProperty, "application");
+        } else {
+            rules = this.getArcgisRule(isLegend, ccProperty, "blah");  // Fix!
+            rules += this.getArcgisRule(isLegend, ccProperty, "blahblah");
+        }
+        
+        String body = "<sld:NamedLayer>" +
+                      "<sld:Name>" + layerName + "</sld:Name>" +
+                      "<sld:UserStyle>" +
+                      "<sld:Name>" + layerName + "Style</sld:Name>" +
+                      "<sld:FeatureTypeStyle>" + rules +
+                      "</sld:FeatureTypeStyle>" +
+                      "</sld:UserStyle>" +
+                      "</sld:NamedLayer>" +
+                      "</sld:StyledLayerDescriptor>";
+        return header + body;
+    }
+
+    /**
+     * Constructs a filter style rule string for ArcGIS Server
+     *
+     * @param isLegend if true then construct for a legend style, instead of map style
+     * @param ccProperty colour code property, colour the image according to this property's value
+     * @param literal the value of the property referred to in 'ccProperty' parameter
+     * @returns an XML filter rule string     
+     */
+    private String getArcgisRule(boolean isLegend, String ccProperty, String literal) {
+        String filter = "";  
+        if (!isLegend) {
+            try {
+                String fillColour = MINERAL_TENEMENT_COLOUR_MAP.get(literal);
+                String strokeColour = fillColour;
+                filter = this.mineralTenementService.getMineralTenementFilterCCProperty(null, null, null, null, null, null, null, null, MineralTenementServiceProviderType.ArcGIS);
+                filter += "<sld:PolygonSymbolizer>" +
+                          "<sld:Fill>" +
+                          "<sld:CssParameter name=\"fill\">" + fillColour + "</sld:CssParameter>" +
+                          "<sld:CssParameter name=\"fill-opacity\">0.5</sld:CssParameter>" +
+                          "</sld:Fill>" +
+                          "<sld:Stroke>" +
+                          "<sld:CssParameter name=\"stroke\">" + strokeColour + "</sld:CssParameter>" +
+                          "<sld:CssParameter name=\"stroke-opacity\">1</sld:CssParameter>" +
+                          "<sld:CssParameter name=\"stroke-width\">1</sld:CssParameter>" +
+                          "</sld:Stroke>" +
+                          "</sld:PolygonSymbolizer>";
+            } catch (Exception e) {
+                e.printStackTrace();
+            }            
+        }
+        return "<sld:Rule>" + filter + "</sld:Rule>";
     }
 
     private Document getDocumentFromString(String responseString)

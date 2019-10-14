@@ -18,29 +18,36 @@ public class MineralTenementFilter extends GenericFilter {
     List<String> fragments;
 
     /**
-     * Given a mine name, this object will build a filter to a wild card search for mine names
+     * Given set of attributes this object will build a filter to a wild card search for matching tenements
      * Extended to support mt:status as well.
-     * @param mineName
-     *            the main name
+     * @param tenementName name of tenement
+     * @param tenementType type of tenement 
+     * @param owner owner's name
+     * @param size tenement size
+     * @param endDate end date
+     * @param status tenement status
+     * @param optionalFilters filter by attributes other than those above
+     * @param mineralTenementServiceProviderType is this service provided by Geoserver or AcrGIS server
      */
-    public MineralTenementFilter(String tenementName, String tenementType, String owner, String size, String endDate,String status,String optionalFilters, MineralTenementServiceProviderType mineralTenementServiceProviderType) {
+    public MineralTenementFilter(String tenementName, String tenementType, String owner, String size, String endDate, String status,
+                                 String optionalFilters, MineralTenementServiceProviderType mineralTenementServiceProviderType) {
         super(optionalFilters);
         if (mineralTenementServiceProviderType == null) {
             mineralTenementServiceProviderType = MineralTenementServiceProviderType.GeoServer;
         }
         fragments = new ArrayList<String>();
 
-        if(optionalFilters == null || optionalFilters.isEmpty()){
+        if (optionalFilters == null || optionalFilters.isEmpty()) {
 
             if (tenementName != null && !tenementName.isEmpty()) {
                 fragments.add(this.generatePropertyIsLikeFragment(mineralTenementServiceProviderType.nameField(), "*" + tenementName + "*"));
             }
             if (tenementType != null && !tenementType.isEmpty()) {
-                fragments.add(this.generatePropertyIsLikeFragment("mt:tenementType", tenementType));
+                fragments.add(this.generatePropertyIsLikeFragment(mineralTenementServiceProviderType.tenementTypeField(), tenementType));
             }
 
             if (owner != null && !owner.isEmpty()) {
-            fragments.add(this.generatePropertyIsLikeFragment(mineralTenementServiceProviderType.ownerField(), owner));
+                fragments.add(this.generatePropertyIsLikeFragment(mineralTenementServiceProviderType.ownerField(), owner));
             }
 
             if (size != null && !size.isEmpty()) {
@@ -52,44 +59,14 @@ public class MineralTenementFilter extends GenericFilter {
             }
 
             if (status != null && !status.isEmpty()) {
-                fragments.add(this.generatePropertyIsLikeFragment("mt:status", status));
+                fragments.add(this.generatePropertyIsLikeFragment(mineralTenementServiceProviderType.statusField(), status));
             }
-        }else{
+        } else {
             fragments = this.generateParameterFragments();
 
         }
     }
-    /**
-     * Given a mine name, this object will build a filter to a wild card search for mine names
-     *
-     * @param mineName
-     *            the main name
-     */
-    public MineralTenementFilter(String tenementName, String tenementType, String owner, String size, String endDate, MineralTenementServiceProviderType mineralTenementServiceProviderType) {
-        if (mineralTenementServiceProviderType == null) {
-            mineralTenementServiceProviderType = MineralTenementServiceProviderType.GeoServer;
-        }
-        fragments = new ArrayList<String>();
-        if (tenementName != null && !tenementName.isEmpty()) {
-            fragments.add(this.generatePropertyIsLikeFragment(mineralTenementServiceProviderType.nameField(), "*" + tenementName + "*"));
-        }
-        if (tenementType != null && !tenementType.isEmpty()) {
-            fragments.add(this.generatePropertyIsLikeFragment("mt:tenementType", tenementType));
-        }
-
-        if (owner != null && !owner.isEmpty()) {
-            fragments.add(this.generatePropertyIsLikeFragment(mineralTenementServiceProviderType.ownerField(), owner));
-        }
-
-        if (size != null && !size.isEmpty()) {
-            fragments.add(this.generatePropertyIsGreaterThanOrEqualTo("mt:area", size));
-        }
-
-        if (endDate != null && !endDate.isEmpty()) {
-            fragments.add(this.generatePropertyIsLessThanOrEqualTo("mt:expireDate", endDate));
-        }
-
-    }
+    
     @Override
     public String getFilterStringAllRecords() {
         return this.generateFilter(this.generateAndComparisonFragment(fragments.toArray(new String[fragments.size()])));
